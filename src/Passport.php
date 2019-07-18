@@ -146,6 +146,13 @@ class Passport
     public static $unserializesCookies = false;
 
     /**
+     * Indicates if Passport should be stateless.
+     *
+     * @var bool
+     */
+    public static $stateless = false;
+
+    /**
      * Enable the implicit grant type.
      *
      * @return static
@@ -618,6 +625,19 @@ class Passport
     public static function withoutCookieSerialization()
     {
         static::$unserializesCookies = false;
+
+        return new static;
+    }
+
+    /**
+     * Configure Passport to work with a stateless API
+     * instead of a server-rendered application.
+     *
+     * @return static
+     */
+    public static function stateless($value = true)
+    {
+        static::$stateless = $value;
 
         return new static;
     }

@@ -46,13 +46,26 @@ class RouteRegistrar
      */
     public function forAuthorization()
     {
-        $this->router->group(['middleware' => ['web', 'auth']], function ($router) {
+        if (Passport::$stateless) {
+            $this->router->group(['middleware' => ['web', 'guest']], function ($router) {
+                $router->get('/login', [
+                    'uses' => 'LoginController@showLoginForm',
+                    'as' => 'login',
+                ]);
+        
+                $router->post('/login', [
+                    'uses' => 'LoginController@login',
+                ]);
+            });
+        }
+        
+        $this->router->group(['middleware' => ['web', 'auth:web']], function ($router) {
             $router->get('/authorize', [
                 'uses' => 'AuthorizationController@authorize',
                 'as' => 'passport.authorizations.authorize',
                 'middleware' => [HandleOAuthErrors::class],
             ]);
-
+    
             $router->post('/authorize', [
                 'uses' => 'ApproveAuthorizationController@approve',
                 'as' => 'passport.authorizations.approve',
@@ -79,7 +92,7 @@ class RouteRegistrar
             'middleware' => ['throttle', HandleOAuthErrors::class],
         ]);
 
-        $this->router->group(['middleware' => ['web', 'auth']], function ($router) {
+        $this->router->group(['middleware' => $this->getMiddleware()], function ($router) {
             $router->get('/tokens', [
                 'uses' => 'AuthorizedAccessTokenController@forUser',
                 'as' => 'passport.tokens.index',
@@ -100,7 +113,7 @@ class RouteRegistrar
     public function forTransientTokens()
     {
         $this->router->post('/token/refresh', [
-            'middleware' => ['web', 'auth'],
+            'middleware' => $this->getMiddleware(),
             'uses' => 'TransientTokenController@refresh',
             'as' => 'passport.token.refresh',
         ]);
@@ -113,7 +126,7 @@ class RouteRegistrar
      */
     public function forClients()
     {
-        $this->router->group(['middleware' => ['web', 'auth']], function ($router) {
+        $this->router->group(['middleware' => $this->getMiddleware()], function ($router) {
             $router->get('/clients', [
                 'uses' => 'ClientController@forUser',
                 'as' => 'passport.clients.index',
@@ -143,7 +156,7 @@ class RouteRegistrar
      */
     public function forPersonalAccessTokens()
     {
-        $this->router->group(['middleware' => ['web', 'auth']], function ($router) {
+        $this->router->group(['middleware' => $this->getMiddleware()], function ($router) {
             $router->get('/scopes', [
                 'uses' => 'ScopeController@all',
                 'as' => 'passport.scopes.index',
@@ -164,5 +177,10 @@ class RouteRegistrar
                 'as' => 'passport.personal.tokens.destroy',
             ]);
         });
+    }
+
+    protected function getMiddleware()
+    {
+        return Passport::$stateless ? ['api', 'auth'] : ['web', 'auth'];
     }
 }
